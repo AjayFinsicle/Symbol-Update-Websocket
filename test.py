@@ -1,15 +1,19 @@
-from multiprocessing import Process
-from fyers_apiv3.FyersWebsocket import data_ws
 import asyncio
 import websockets
 import json
+import subprocess
+import sys
+from multiprocessing import Process
+from fyers_apiv3.FyersWebsocket import data_ws
 
-
+token_symbol_map = {}  # Initialize the token_symbol_map
 
 def onmessage(token_number, symbol, message):
     try:
         symbol_data = message
         print(f"Token {token_number} - Symbol {symbol} data: {symbol_data}")
+        if symbol in token_symbol_map:
+            print("symbol not updated")
         # Process and handle the data for the specific symbol here
     except KeyError as e:
         print("KeyError:", e)
@@ -38,24 +42,45 @@ def create_and_connect_socket(access_token, symbol):
     fyers_data.connect()
     fyers_data.subscribe([symbol])
 
-client_id = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9"
+async def handle_websocket_connection(websocket, path):
+    try:
+        async for message in websocket:
+            print(f"Received message: {message}")
+            data_list = json.loads(message)
+
+            for data_dict in data_list:
+                if data_dict.get("type") == "code_response":
+                    access_token = data_dict.get("token")
+                    symbols = data_dict.get("symbols")
+
+                    # Update the access token and symbols in the dictionary
+                    token_symbol_map[access_token] = symbols
+
+            print("--------------------------------------------------")
+            print("Token Symbols map", token_symbol_map)
+
+            
+
+            # Start the WebSocket connection for received tokens and symbols
+            processes = []
+            for access_token, symbols in token_symbol_map.items():
+                for symbol in symbols:
+                    process = Process(target=create_and_connect_socket, args=(access_token, symbol))
+                    processes.append(process)
+                    process.start()
+
+            try:
+                for process in processes:
+                    process.join()
+            except KeyboardInterrupt:
+                for process in processes:
+                    process.terminate()
+
+    except websockets.exceptions.ConnectionClosedError:
+        pass
 
 if __name__ == "__main__":
-    token_symbol_map = {
-        "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2OTg4MjY1OTUsImV4cCI6MTY5ODg4NTAzNSwibmJmIjoxNjk4ODI2NTk1LCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCbFFnbGpaOThsd1hWNTl2SUdRR0VRUkp1YmNCUHNoSUFUaTJxVmxfU1pJekZsNmFYNHVmYkI1MEh6S0huLWNuQXFSS2pBN1ZUWGxIa3ZtOV9pOWU4WDU1bWZPTjdJeE9XdS14UmotbFI3Um1Rd2hobz0iLCJkaXNwbGF5X25hbWUiOiJGSU5TSUNMRSBQUklWQVRFIExJTUlURUQiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiI4OGE2NzUwYjc4ZmNiNWI2NGZhOWVlZTQ2NTlkZTVkZDFhY2M0MWFmNzJiOWZlNWU1MDBhYTg0NyIsImZ5X2lkIjoiQ0EwMDEzOCIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.e-MmGMm6JZbUYOCQ-Cn60itspxt_q4zAMQgDsw0jCVQ": ["NSE:NIFTY50-INDEX"],
-        "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2OTg4MjY2MjgsImV4cCI6MTY5ODg4NTAwOCwibmJmIjoxNjk4ODI2NjI4LCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCbFFnbUVMSXd1XzBwbUxJRDVHTHZjSjFWV1ljQlF0SUJzNEpwOUFTbWdSSk5BVXlUWVJ4RmdQMm02WEFLVHNncWE0cHN0TkowdFZqNFh4Q1dfZURRdlZzVFVrV1FRakNNZFJkUGlpTFpIdUdrV1FVMD0iLCJkaXNwbGF5X25hbWUiOiJGSU5TSUNMRSBQUklWQVRFIExJTUlURUQiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiI4OGE2NzUwYjc4ZmNiNWI2NGZhOWVlZTQ2NTlkZTVkZDFhY2M0MWFmNzJiOWZlNWU1MDBhYTg0NyIsImZ5X2lkIjoiQ0EwMDEzOCIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.-78lZgb4tNXqmREdakggdmA2af8XPBYL-KoWgiKqihQ": ["NSE:FINNIFTY-INDEX"]
-    }
+    start_server = websockets.serve(handle_websocket_connection, "localhost", 8999)
 
-    processes = []
-    for access_token, symbols in token_symbol_map.items():
-        for symbol in symbols:
-            process = Process(target=create_and_connect_socket, args=(access_token, symbol))
-            processes.append(process)
-            process.start()
-
-    try:
-        for process in processes:
-            process.join()
-    except KeyboardInterrupt:
-        for process in processes:
-            process.terminate()
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()

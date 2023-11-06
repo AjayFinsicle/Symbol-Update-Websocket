@@ -1,40 +1,18 @@
-# import sys
-# import json
-
-# if __name__ == "__main__":
-#     if len(sys.argv) < 2:
-#         print("Usage: python main.py <token_symbol_map_json>")
-#         sys.exit(1)
-
-#     token_symbol_map_json = sys.argv[1]
-
-#     # Parse the token_symbol_map from the JSON string
-#     token_symbol_map = json.loads(token_symbol_map_json)
-
-#     print("Received token_symbol_map in main.py:")
-#     print(token_symbol_map)
-
-
-
-
-
-
-
-
 import sys
 import json
 from multiprocessing import Process
 from fyers_apiv3.FyersWebsocket import data_ws
 from main import token_symbol_map
 
-
 def onmessage(token_number, symbol, message):
     try:
         symbol_data = message
         print(f"Token {token_number} - Symbol {symbol} data: {symbol_data}")
+        print("heartbeat")
         # Process and handle the data for the specific symbol here
     except KeyError as e:
         print("KeyError:", e)
+
 
 def onerror(token_number, symbol, message):
     print(f"Token {token_number} - Symbol {symbol} Error:", message)
@@ -71,10 +49,8 @@ if __name__ == "__main__":
     # Parse the token_symbol_map from the JSON string
     token_symbol_map = json.loads(token_symbol_map_json)
 
-    print("Received token_symbol_map in main.py:")
-    print(token_symbol_map)
-
-    # Now you can use token_symbol_map in your main.py as needed
+    # print("Received token_symbol_map in main.py:")
+    # print(token_symbol_map)
 
     processes = []
     for access_token, symbols in token_symbol_map.items():
@@ -89,6 +65,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         for process in processes:
             process.terminate()
-
 
 
