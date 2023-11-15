@@ -3,16 +3,22 @@ import websockets
 from fyers_apiv3.FyersWebsocket import data_ws
 import json
 
-# Create a dictionary to keep track of subscribed symbols for each device
-device_symbols = {}
+# Create a set to keep track of subscribed symbols
+subscribed_symbols = set()
 
 def onmessage(message):
     try:
         symbol_data = message
         print(symbol_data)
+        messege_send(symbol_data)
         # Process and handle the data for the specific symbol here
     except KeyError as e:
         print("KeyError:", e)
+
+def messege_send(symbol_data):
+    print("Sending message: ", symbol_data)
+    
+
 
 def onerror(message):
     print("Error:", message)
@@ -30,18 +36,22 @@ async def listen_to_external_websocket(websocket, path):
             message = await websocket.recv()
             print(f"Received message: {message}")
 
-            # Extract access token, symbols, and device_id from the received message
-            result = extract_data_from_message(message)
+            # Extract access token, symbols, socket IDs, and socket-symbols map from the received message
+            access_token, symbols, socket_ids, socket_symbols_map = extract_data_from_message(message)
 
             # Subscribe to symbols using the received access token
-            if result:
-                access_token, symbols, device_id = result
+            if access_token and symbols:
                 print(f"Received access token: {access_token}")
                 print(f"Received symbols: {symbols}")
-                print(f"Received device ID: {device_id}")
+                
+                # Print socket IDs
+                print(f"Received socket IDs: {socket_ids}")
 
-                # Subscribe to symbols using the received access token for the specific device
-                subscribe_to_symbols(access_token, symbols, device_id)
+                # Print socket-symbols map
+                print(f"Socket Symbols Map: {socket_symbols_map}")
+
+                # Subscribe to symbols using the received access token
+                subscribe_to_symbols(access_token, symbols)
 
         except websockets.exceptions.ConnectionClosed:
             print("WebSocket connection closed. Reconnecting...")
@@ -49,49 +59,56 @@ async def listen_to_external_websocket(websocket, path):
         except Exception as e:
             print(f"An error occurred: {e}")
 
+
+
 def extract_data_from_message(message):
     try:
         # Assuming message is a JSON-formatted list
         data_list = json.loads(message)
 
+        access_token = None
+        symbols = []
+        socket_ids = []
+
         for data in data_list:
             if "type" in data and data["type"] == "code_response":
                 access_token = data.get("token")
-                symbols = data.get("symbols", [])
-                device_id = data.get("socket_id")
+                symbols.extend(data.get("symbols", []))
+                socket_id = data.get("socket_id")
+                socket_ids.append(socket_id)
 
-                if access_token and symbols and device_id:
-                    return access_token, symbols, device_id
+        # Create a dictionary to map socket IDs to symbols
+        socket_symbols_map = {socket_id: symbols for socket_id in socket_ids}
+
+        if access_token and symbols:
+            return access_token, symbols, socket_ids, socket_symbols_map
 
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
 
-    return None, None, None
+    return None, None, None, None
 
 
-def subscribe_to_symbols(access_token, symbols, device_id):
-    if device_id not in device_symbols:
-        device_symbols[device_id] = set()
-
-    # Create a new FyersDataSocket instance with the received access token for the specific device
+def subscribe_to_symbols(access_token, symbols):
+    # Create a new FyersDataSocket instance with the received access token
     fyers_instance = create_fyers_instance(access_token)
     fyers_instance.connect()
 
-    # Unsubscribe from old symbols for the specific device
-    symbols_to_unsubscribe = device_symbols[device_id] - set(symbols)
+    # Unsubscribe from old symbols
+    symbols_to_unsubscribe = subscribed_symbols - set(symbols)
     for symbol in symbols_to_unsubscribe:
-        if symbol in device_symbols[device_id]:
-            print(f"Unsubscribing from {symbol} for device {device_id}")
+        if symbol in subscribed_symbols:
+            print(f"Unsubscribing from {symbol}")
             fyers_instance.unsubscribe(symbols=[symbol])
-            device_symbols[device_id].discard(symbol)
+            subscribed_symbols.discard(symbol)
 
-    # Subscribe to new symbols for the specific device
-    symbols_to_subscribe = set(symbols) - device_symbols[device_id]
+    # Subscribe to new symbols
+    symbols_to_subscribe = set(symbols) - subscribed_symbols
     for symbol in symbols_to_subscribe:
         data_type = "SymbolUpdate"
-        print(f"Subscribing to {symbol} for device {device_id}")
+        print(f"Subscribing to {symbol}")
         fyers_instance.subscribe(symbols=[symbol], data_type=data_type)
-        device_symbols[device_id].add(symbol)
+        subscribed_symbols.add(symbol)
 
 def create_fyers_instance(access_token):
     return data_ws.FyersDataSocket(
