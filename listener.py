@@ -7,12 +7,12 @@ async def handle_websocket_connection(websocket, path):
             # Handle messages received from clients (React or Python)
             # print(f"Received message: {message}")
             response = message
-            data = {}
-            data.append(response)
-            print(data)
+            # data = {}
+            # data.append(response)
+            print(response)
     except websockets.exceptions.ConnectionClosedError:
         pass
 
-start_server = websockets.serve(handle_websocket_connection, "localhost", 8999) 
+start_server = websockets.serve(handle_websocket_connection, "localhost", 9999) 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

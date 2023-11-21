@@ -3,7 +3,7 @@ import websockets
 import json
 
 async def send_test_messages():
-    async with websockets.connect("ws://localhost:8999") as websocket:
+    async with websockets.connect("ws://localhost:9999") as websocket:
         test_message = [
             {
                 "type": "code_response",
