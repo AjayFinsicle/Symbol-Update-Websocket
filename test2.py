@@ -1,11 +1,13 @@
 import asyncio
 import threading
 import queue
+import aiohttp_cors
 import websockets
 import json
 import socketio
 from fyers_apiv3.FyersWebsocket import data_ws
 from aiohttp import web
+from aiohttp_cors import ResourceOptions
 
 # Create a set to keep track of subscribed symbols
 subscribed_symbols = set()
@@ -17,9 +19,41 @@ fyers_instance = None
 message_queue = queue.Queue()
 
 # Create a Socket.IO server instance
-sio = socketio.AsyncServer(cors_allowed_origins='*')
+# sio = socketio.AsyncServer(cors_allowed_origins='*')
+# sio = socketio.AsyncServer()
+
+# CORS_CONFIG = {
+#     "*": aiohttp_cors.ResourceOptions(
+#         allow_credentials=True,
+#         expose_headers="*",
+#         allow_headers="*",
+#     )
+# }
+
+
+# app = web.Application()
+# sio.attach(app)
+# aiohttp_cors.setup(app, defaults=CORS_CONFIG)
+
+
 app = web.Application()
+sio = socketio.AsyncServer(cors_allowed_origins='*')
 sio.attach(app)
+
+# Define CORS handler middleware
+async def cors_handler(app, handler):
+    async def middleware(request):
+        response = await handler(request)
+        if response is None:
+            response = web.Response()
+        # Note: You can omit these headers if you prefer, as Socket.IO will handle CORS.
+        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Headers'] = '*'
+        response.headers['Access-Control-Expose-Headers'] = '*'
+        return response
+
+    return middleware
 
 def onmessage(message):
     try:
@@ -125,6 +159,7 @@ async def listen_to_external_websocket(websocket, path):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+
 def extract_data_from_message(message):
     try:
         # Assuming message is a JSON-formatted list
@@ -207,7 +242,7 @@ async def disconnect(sid):
 
 # Start the Socket.IO server for listening on port 9999 only
 async def run_socketio():
-    await web._run_app(app, port=server_port2)
+    await web._run_app(app, port=server_port1)
 
 socketio_thread = threading.Thread(target=asyncio.run, args=(run_socketio(),))
 socketio_thread.start()
