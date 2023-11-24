@@ -27,17 +27,29 @@ def onmessage(message):
     except KeyError as e:
         print("KeyError:", e)
 
+# async def messege_send(symbol_data, socket_symbols_map):
+#     print("Sending message: ", symbol_data)
+#     print("Socket Symbols Map in messege_send: ", socket_symbols_map)
+
+#     for socket_id, symbols in socket_symbols_map.items():
+#         if symbol_data["symbol"] in symbols:
+#             socket_data = (socket_id, symbol_data)
+#             print(f"Data for Socket ID {socket_id}: {symbol_data}")
+#             socketio_9999.emit('message', symbol_data, room=str(socket_id))
+#             print(f"Data sent to Socket.IO for Socket ID {socket_id}")
+
 async def messege_send(symbol_data, socket_symbols_map):
     print("Sending message: ", symbol_data)
     print("Socket Symbols Map in messege_send: ", socket_symbols_map)
 
     for socket_id, symbols in socket_symbols_map.items():
-        if symbol_data["symbol"] in symbols:
+        print("udhudd")
+        # Check if "symbol" key exists in symbol_data and if any word in symbols matches any word in symbol_data["symbol"]
+        if "symbol" in symbol_data and any(word in symbol_data["symbol"] for word in symbols):
             socket_data = (socket_id, symbol_data)
             print(f"Data for Socket ID {socket_id}: {symbol_data}")
             socketio_9999.emit('message', symbol_data, room=str(socket_id))
             print(f"Data sent to Socket.IO for Socket ID {socket_id}")
-
 
 
 
@@ -207,7 +219,6 @@ def handle_disconnect():
 
 @socketio_8999.on('message')
 def listen_to_external_websocket(data):
-    print("bfufffuf")
     global socket_symbols_map 
     global fyers_instance 
 
@@ -236,8 +247,8 @@ def listen_to_external_websocket(data):
             # Check if the socket_id is already in socket_symbols_map
             for socket_id, new_symbols in new_socket_symbols_map.items():
                 if socket_id in socket_symbols_map:
-                    # Check if the new symbols are different from the existing ones
                     if set(new_symbols) != set(socket_symbols_map[socket_id]):
+                    
                         # Unsubscribe old symbols for that socket_id
                         symbols_to_unsubscribe = set(socket_symbols_map[socket_id]) - set(new_symbols)
                         for symbol in symbols_to_unsubscribe:

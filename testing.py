@@ -22,34 +22,34 @@ def onmessage(message):
     except KeyError as e:
         print("KeyError:", e)
 
-async def messege_send(symbol_data, socket_symbols_map):
-    print("Sending message: ", symbol_data)
-    print("Socket Symbols Map in messege_send: ", socket_symbols_map)
+# async def messege_send(symbol_data, socket_symbols_map):
+#     print("Sending message: ", symbol_data)
+#     print("Socket Symbols Map in messege_send: ", socket_symbols_map)
 
-    for socket_id, symbols in socket_symbols_map.items():
-        if symbol_data["symbol"] in symbols:
-            socket_data = (socket_id, symbol_data)
-            print(f"Data for Socket ID {socket_id}: {symbol_data}")
+#     for socket_id, symbols in socket_symbols_map.items():
+#         if symbol_data["symbol"] in symbols:
+#             socket_data = (socket_id, symbol_data)
+#             print(f"Data for Socket ID {socket_id}: {symbol_data}")
 
-            # Create a WebSocket connection and send the data
-            uri = f"ws://localhost:9999"  # Adjust the URI based on your WebSocket server address and port
-            async with websockets.connect(uri) as websocket:
-                data = await websocket.send(json.dumps(socket_data))
-                print(data)
-                print(f"Data sent to WebSocket for Socket ID {socket_id}")
+#             # Create a WebSocket connection and send the data
+#             uri = f"ws://localhost:9999"  # Adjust the URI based on your WebSocket server address and port
+#             async with websockets.connect(uri) as websocket:
+#                 data = await websocket.send(json.dumps(socket_data))
+#                 print(data)
+#                 print(f"Data sent to WebSocket for Socket ID {socket_id}")
 
-def message_consumer():
-    while True:
-        try:
-            # Get a message from the queue and run the messege_send coroutine
-            message = message_queue.get()
-            asyncio.run(messege_send(message, socket_symbols_map))
-        except Exception as e:
-            print(f"An error occurred in message_consumer: {e}")
+# def message_consumer():
+#     while True:
+#         try:
+#             # Get a message from the queue and run the messege_send coroutine
+#             message = message_queue.get()
+#             asyncio.run(messege_send(message, socket_symbols_map))
+#         except Exception as e:
+#             print(f"An error occurred in message_consumer: {e}")
 
-# Start the message_consumer thread
-consumer_thread = threading.Thread(target=message_consumer, daemon=True)
-consumer_thread.start()
+# # Start the message_consumer thread
+# consumer_thread = threading.Thread(target=message_consumer, daemon=True)
+# consumer_thread.start()
 
 def onerror(message):
     print("Error:", message)

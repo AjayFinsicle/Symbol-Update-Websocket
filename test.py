@@ -27,16 +27,38 @@ async def messege_send(symbol_data, socket_symbols_map):
     print("Socket Symbols Map in messege_send: ", socket_symbols_map)
 
     for socket_id, symbols in socket_symbols_map.items():
-        if symbol_data["symbol"] in symbols:
-            socket_data = (socket_id, symbol_data)
-            print(f"Data for Socket ID {socket_id}: {symbol_data}")
+        for symbol in symbol_data.get("symbols", []):
+            if symbol in symbols:
+                print(symbol)
+                print(symbols)
+                socket_data = (socket_id, symbol_data)
+                print(f"Data for Socket ID {socket_id}: {symbol_data}")
 
-            # Create a WebSocket connection and send the data to port 9999
-            uri = "ws://localhost:9999"  # Use a constant URI for port 9999
-            async with websockets.connect(uri) as websocket:
-                data = await websocket.send(json.dumps(socket_data))
-                print(data)
-                print(f"Data sent to WebSocket for Socket ID {socket_id}")
+                # Create a WebSocket connection and send the data to port 9999
+                uri = "ws://localhost:9999"  # Use a constant URI for port 9999
+                async with websockets.connect(uri) as websocket:
+                    data = await websocket.send(json.dumps(socket_data))
+                    print(data)
+                    print(f"Data sent to WebSocket for Socket ID {socket_id}")
+
+
+
+# async def messege_send(symbol_data, socket_symbols_map):
+#     print("Sending message: ", symbol_data)
+#     print("Socket Symbols Map in messege_send: ", socket_symbols_map)
+
+#     for socket_id, symbols in socket_symbols_map.items():
+#         print("udhudd")
+#         # Check if "symbol" key exists in symbol_data and if any word in symbols matches any word in symbol_data["symbol"]
+#         if "symbol" in symbol_data and any(word in symbol_data["symbol"] for word in symbols):
+#             socket_data = (socket_id, symbol_data)
+#             print(f"Data for Socket ID {socket_id}: {symbol_data}")
+#             uri = "ws://localhost:9999"  # Use a constant URI for port 9999
+#             async with websockets.connect(uri) as websocket:
+#                 data = await websocket.send(json.dumps(socket_data))
+#                 print(data)
+#                 print(f"Data sent to WebSocket for Socket ID {socket_id}")
+        
 
 def message_consumer():
     while True:
